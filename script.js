@@ -47,7 +47,7 @@ let currentPage = 0;
 const PAGE_SIZE = 15;
 let todosLosDatosHistorial = [];
 
-// Establecer la fecha actual por defecto en YYYY-MM-DD local
+// Establecer fecha de hoy en el input
 const hoy = new Date();
 const year = hoy.getFullYear();
 const month = String(hoy.getMonth() + 1).padStart(2, '0');
@@ -71,7 +71,6 @@ function generarGrilla() {
         gridContainer.appendChild(btn);
     });
 
-    // Llenar selector de análisis de parejas
     if (selectPareja) {
         selectPareja.innerHTML = '<option value="">Selecciona un Animalito...</option>';
         ANIMALITOS.forEach(item => {
@@ -128,14 +127,16 @@ btnLogout.addEventListener('click', async () => {
     loginScreen.classList.remove('hidden');
 });
 
-// Función auxiliar para formatear la fecha YYYY-MM-DD a DD/MM/YYYY sin desfase horario
-function formatearFechaEspanol(fechaStr) {
-    if (!fechaStr) return 'N/A';
-    const partes = fechaStr.split('T')[0].split('-');
-    if (partes.length === 3) {
-        return `${partes[2]}/${partes[1]}/${partes[0]}`;
-    }
-    return fechaStr;
+// Función para mostrar fecha amigable
+function formatearFecha(fechaIso) {
+    if (!fechaIso) return 'N/A';
+    const d = new Date(fechaIso);
+    if (isNaN(d.getTime())) return fechaIso;
+    return d.toLocaleDateString('es-VE', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+    });
 }
 
 // Cargar Historial
@@ -166,8 +167,7 @@ async function cargarResultados() {
 
     data.forEach(item => {
         const li = document.createElement('li');
-        // Muestra la fecha seleccionada guardada en `fecha`, o en su defecto la de `created_at`
-        const fechaMostrar = item.fecha ? formatearFechaEspanol(item.fecha) : formatearFechaEspanol(item.created_at);
+        const fechaMostrar = formatearFecha(item.created_at);
         li.innerHTML = `
             <span><strong>${item.numero} - ${item.nombre}</strong></span>
             <span style="color: #a8b2d1; font-size: 0.75rem;">${fechaMostrar}</span>
@@ -183,7 +183,7 @@ async function cargarResultados() {
 document.getElementById('btn-prev').addEventListener('click', () => { if (currentPage > 0) { currentPage--; cargarResultados(); } });
 document.getElementById('btn-next').addEventListener('click', () => { currentPage++; cargarResultados(); });
 
-// ALGORITMO AUTOMÁTICO DE ANÁLISIS 24/7
+// ALGORITMO DE ANÁLISIS
 async function ejecutarAlgoritmoAnalisis() {
     const { data } = await supabaseClient
         .from('resultados')
@@ -193,7 +193,6 @@ async function ejecutarAlgoritmoAnalisis() {
     if (!data || data.length === 0) return;
     todosLosDatosHistorial = data;
 
-    // 1. Conteo global de frecuencias (Calientes y Fríos)
     const conteo = {};
     ANIMALITOS.forEach(a => conteo[a.num] = 0);
     
@@ -212,104 +211,31 @@ async function ejecutarAlgoritmoAnalisis() {
     if (document.getElementById('top-menos-salen')) {
         document.getElementById('top-menos-salen').innerHTML = topMenos;
     }
-
-    // 2. Procesamiento Automático Mensual y Semanal en Segundo Plano
-    analizarResumenMensualYSemanal(data);
 }
 
-// Cálculo Automático Mensual / Semanal
-function analizarResumenMensualYSemanal(datos) {
-    const ahora = new Date();
-    const mesActual = ahora.getMonth();
-    const anioActual = ahora.getFullYear();
-
-    // Inicio de la semana actual (Lunes)
-    const inicioSemana = new Date(ahora);
-    const diaSemana = ahora.getDay() === 0 ? 7 : ahora.getDay(); 
-    inicioSemana.setDate(ahora.getDate() - diaSemana + 1);
-    inicioSemana.setHours(0, 0, 0, 0);
-
-    const conteoMes = {};
-    const conteoSemana = {};
-
-    datos.forEach(item => {
-        const fechaReg = new Date(item.fecha || item.created_at);
-        if (isNaN(fechaReg.getTime())) return;
-
-        // Filtrar por Mes
-        if (fechaReg.getMonth() === mesActual && fechaReg.getFullYear() === anioActual) {
-            conteoMes[item.numero] = (conteoMes[item.numero] || 0) + 1;
-        }
-
-        // Filtrar por Semana
-        if (fechaReg >= inicioSemana) {
-            conteoSemana[item.numero] = (conteoSemana[item.numero] || 0) + 1;
-        }
-    });
-
-    // Obtener los más salidores del mes y semana
-    const masMes = Object.entries(conteoMes).sort((a, b) => b[1] - a[1])[0];
-    const masSemana = Object.entries(conteoSemana).sort((a, b) => b[1] - a[1])[0];
-
-    const elemMes = document.getElementById('resumen-mes-auto');
-    if (elemMes && masMes) {
-        elemMes.innerHTML = `🏆 Top Mes: <strong>${masMes[0]}</strong> (${masMes[1]} veces)`;
-    }
-
-    const elemSemana = document.getElementById('resumen-semana-auto');
-    if (elemSemana && masSemana) {
-        elemSemana.innerHTML = `⚡ Top Semana: <strong>${masSemana[0]}</strong> (${masSemana[1]} veces)`;
-    }
-}
-
-// Rastreador de parejas cuando se cambia el selector
-if (selectPareja) {
-    selectPareja.addEventListener('change', (e) => {
-        const numBuscado = e.target.value;
-        if (!numBuscado || todosLosDatosHistorial.length < 2) {
-            resultadoPareja.innerHTML = "Insuficientes datos para calcular secuencias.";
-            return;
-        }
-
-        const parejas = {};
-        for (let i = 0; i < todosLosDatosHistorial.length - 1; i++) {
-            if (todosLosDatosHistorial[i].numero === numBuscado) {
-                const numeroSiguiente = todosLosDatosHistorial[i + 1].numero;
-                parejas[numeroSiguiente] = (parejas[numeroSiguiente] || 0) + 1;
-            }
-        }
-
-        const masFrecuente = Object.entries(parejas).sort((a, b) => b[1] - a[1])[0];
-
-        if (masFrecuente) {
-            resultadoPareja.innerHTML = `⚠️ <strong>Análisis Automático:</strong><br>Cuando sale el <strong>${numBuscado}</strong>, el animalito que más suele acompañarle o salir pegado es el <strong>${masFrecuente[0]}</strong> (ha salido ${masFrecuente[1]} veces en pareja).`;
-        } else {
-            resultadoPareja.innerHTML = `No se han detectado secuencias repetidas para el ${numBuscado} aún.`;
-        }
-    });
-}
-
-// Guardar Guardando Fecha Elegida Exacta
+// Guardar en Supabase sin errores de columna
 formResultado.addEventListener('submit', async (e) => {
     e.preventDefault();
     const numero = numeroInput.value.trim();
     const nombre = nombreInput.value.trim();
-    const fechaSeleccionada = fechaInput.value; // Toma la fecha del input calendar
+    const fechaElegida = fechaInput.value; // ej: "2026-08-11"
 
     if (!numero || !nombre) {
         alert("Por favor selecciona un animalito de la grilla táctil.");
         return;
     }
 
-    if (!fechaSeleccionada) {
-        alert("Por favor selecciona una fecha válida.");
-        return;
-    }
+    // Convertimos la fecha seleccionada en formato TIMESTAMP compatible con Supabase (created_at)
+    const fechaObjeto = new Date(fechaElegida + 'T12:00:00');
+    const timestampISO = fechaObjeto.toISOString();
 
-    // Guardamos en Supabase enviando explícitamente el campo `fecha`
     const { error } = await supabaseClient
         .from('resultados')
-        .insert([{ numero, nombre, fecha: fechaSeleccionada }]);
+        .insert([{ 
+            numero: numero, 
+            nombre: nombre, 
+            created_at: timestampISO 
+        }]);
 
     if (error) {
         alert('Error: ' + error.message);
