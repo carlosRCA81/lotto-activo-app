@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LOTTO ACTIVO - CARVALLO AUTOMATION</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+    <!-- PANTALLA 1: LOGIN -->
+    <div id="login-screen" class="card">
+        <h1>LOTTO ACTIVO</h1>
+        <div class="subtitle">CARVALLO AUTOMATION</div>
+        <form id="login-form">
+            <div class="input-group">
+                <label for="login-email">Correo Electrónico:</label>
+                <input type="email" id="login-email" value="carlos80sistema@gmail.com" required>
+            </div>
+            <div class="input-group">
+                <label for="login-password">Contraseña:</label>
+                <input type="password" id="login-password" value="123456" required>
+            </div>
+            <button type="submit" class="btn-primary">Entrar al Sistema</button>
+        </form>
+    </div>
+
+    <!-- PANTALLA 2: SOFTWARE DE AUTOMATIZACIÓN Y ANÁLISIS -->
+    <div id="app-screen" class="card card-wide hidden">
+        <div class="header-app">
+            <div>
+                <h1>LOTTO ACTIVO</h1>
+                <div class="subtitle">PANEL DE CONTROL AUTOMATIZADO</div>
+            </div>
+            <button id="btn-logout" class="btn-secondary">Salir</button>
+        </div>
+
+        <!-- MENU DE PESTAÑAS (PARA NO AMONTONAR LA INTERFAZ) -->
+        <div class="tabs-nav">
+            <button class="tab-btn active" data-tab="tab-registro">📥 Cargar</button>
+            <button class="tab-btn" data-tab="tab-analisis">📊 Análisis</button>
+            <button class="tab-btn" data-tab="tab-historial">📜 Historial</button>
+        </div>
+
+        <!-- PESTAÑA 1: REGISTRO RÁPIDO CON GRILLA -->
+        <div id="tab-registro" class="tab-content active">
+            <form id="form-resultado" class="grid-form">
+                <div class="input-group">
+                    <label for="fecha">Fecha:</label>
+                    <input type="date" id="fecha" required>
+                </div>
+                <div class="input-group">
+                    <label for="hora">Sorteo:</label>
+                    <select id="hora" required>
+                        <option value="08:00 AM">08:00 AM</option>
+                        <option value="09:00 AM">09:00 AM</option>
+                        <option value="10:00 AM">10:00 AM</option>
+                        <option value="11:00 AM">11:00 AM</option>
+                        <option value="12:00 PM">12:00 PM</option>
+                        <option value="01:00 PM">01:00 PM</option>
+                        <option value="02:00 PM">02:00 PM</option>
+                        <option value="03:00 PM">03:00 PM</option>
+                        <option value="04:00 PM">04:00 PM</option>
+                        <option value="05:00 PM">05:00 PM</option>
+                        <option value="06:00 PM">06:00 PM</option>
+                        <option value="07:00 PM">07:00 PM</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label for="numero">Número:</label>
+                    <input type="text" id="numero" placeholder="Toca abajo" readonly required>
+                </div>
+                <div class="input-group">
+                    <label for="nombre">Animalito:</label>
+                    <input type="text" id="nombre" placeholder="Toca abajo" readonly required>
+                </div>
+
+                <!-- SELECTOR VISUAL RÁPIDO -->
+                <div class="grid-container">
+                    <label>Selecciona el Animalito Sorteado:</label>
+                    <div id="animalitos-grid" class="animal-grid"></div>
+                </div>
+
+                <button type="submit" class="btn-primary btn-full">Guardar Resultado</button>
+            </form>
+        </div>
+
+        <!-- PESTAÑA 2: MOTOR DE ANÁLISIS Y PATRONES AUTOMÁTICOS -->
+        <div id="tab-analisis" class="tab-content">
+            <h3>Estadísticas y Algoritmo de Demora</h3>
+            <p class="info-text">El sistema analiza automáticamente el historial guardado:</p>
+            
+            <div class="stats-cards">
+                <div class="stat-box">
+                    <span class="stat-title">🔥 Más Salidores</span>
+                    <div id="top-mas-salen" class="stat-value">Calculando...</div>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-title">❄️ Más Fríos / Con Demora</span>
+                    <div id="top-menos-salen" class="stat-value">Calculando...</div>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <h3>Rastreador de Parejas / Acompañantes</h3>
+            <p class="info-text">Selecciona un número para ver qué animalito suele salir justo después o al día siguiente:</p>
+            <div class="input-group">
+                <select id="select-pareja-numero">
+                    <option value="">Selecciona un Animalito...</option>
+                </select>
+            </div>
+            <div id="resultado-pareja" class="analysis-box">
+                Selecciona un número arriba para analizar su acompañante frecuente.
+            </div>
+        </div>
+
+        <!-- PESTAÑA 3: HISTORIAL COMPLETO Y OPTIMIZADO -->
+        <div id="tab-historial" class="tab-content">
+            <div class="section-title">
+                <h3>Historial de Sorteos</h3>
+                <span id="badge-total" class="badge">0 Total</span>
+            </div>
+
+            <div class="table-container">
+                <ul id="lista-resultados">
+                    <li>Cargando historial...</li>
+                </ul>
+            </div>
+
+            <div class="pagination-controls">
+                <button id="btn-prev" class="btn-pager" disabled>&laquo; Anteriores</button>
+                <span id="page-info">Pág. 1</span>
+                <button id="btn-next" class="btn-pager">Siguientes &raquo;</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
