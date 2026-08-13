@@ -54,7 +54,7 @@ const month = String(hoy.getMonth() + 1).padStart(2, '0');
 const day = String(hoy.getDate()).padStart(2, '0');
 fechaInput.value = `${year}-${month}-${day}`;
 
-// Renderizar la Grilla de Selección Táctil
+// Renderizar Grilla
 function generarGrilla() {
     gridContainer.innerHTML = '';
     ANIMALITOS.forEach(item => {
@@ -72,7 +72,7 @@ function generarGrilla() {
     });
 
     if (selectPareja) {
-        selectPareja.innerHTML = '<option value="">Selecciona un Animalito...</option>';
+        selectPareja.innerHTML = '<option value="">Selecciona un Animalito para Analizar...</option>';
         ANIMALITOS.forEach(item => {
             const opt = document.createElement('option');
             opt.value = item.num;
@@ -82,7 +82,7 @@ function generarGrilla() {
     }
 }
 
-// Navegación por Pestañas
+// Navegación Pestañas
 document.querySelectorAll('.tab-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
@@ -127,7 +127,6 @@ btnLogout.addEventListener('click', async () => {
     loginScreen.classList.remove('hidden');
 });
 
-// Función para mostrar fecha amigable
 function formatearFecha(fechaIso) {
     if (!fechaIso) return 'N/A';
     const d = new Date(fechaIso);
@@ -183,7 +182,7 @@ async function cargarResultados() {
 document.getElementById('btn-prev').addEventListener('click', () => { if (currentPage > 0) { currentPage--; cargarResultados(); } });
 document.getElementById('btn-next').addEventListener('click', () => { currentPage++; cargarResultados(); });
 
-// ALGORITMO DE ANÁLISIS
+// ALGORITMO VIP DE ANÁLISIS AUTOMÁTICO
 async function ejecutarAlgoritmoAnalisis() {
     const { data } = await supabaseClient
         .from('resultados')
@@ -193,10 +192,23 @@ async function ejecutarAlgoritmoAnalisis() {
     if (!data || data.length === 0) return;
     todosLosDatosHistorial = data;
 
+    // Conteo Mensual por Defecto (Mes Actual)
+    const fechaActual = new Date();
+    const mesActual = fechaActual.getMonth();
+    const anioActual = fechaActual.getFullYear();
+
+    const datosDelMes = data.filter(item => {
+        const f = new Date(item.created_at);
+        return f.getMonth() === mesActual && f.getFullYear() === anioActual;
+    });
+
+    // Usar datos del mes o todo el historial si el mes tiene pocos datos
+    const muestraEfectiva = datosDelMes.length > 0 ? datosDelMes : data;
+
     const conteo = {};
     ANIMALITOS.forEach(a => conteo[a.num] = 0);
     
-    data.forEach(item => {
+    muestraEfectiva.forEach(item => {
         if (conteo[item.numero] !== undefined) conteo[item.numero]++;
     });
 
@@ -213,19 +225,55 @@ async function ejecutarAlgoritmoAnalisis() {
     }
 }
 
-// Guardar en Supabase sin errores de columna
+// Rastreador Automático de Secuencias y Parejas
+if (selectPareja) {
+    selectPareja.addEventListener('change', (e) => {
+        const numBuscado = e.target.value;
+        if (!numBuscado || todosLosDatosHistorial.length < 2) {
+            resultadoPareja.innerHTML = "Selecciona un animalito para calcular secuencias automáticas.";
+            return;
+        }
+
+        const parejas = {};
+        let totalApariciones = 0;
+
+        // Recorrer historial buscando el patrón
+        for (let i = 0; i < todosLosDatosHistorial.length - 1; i++) {
+            if (todosLosDatosHistorial[i].numero === numBuscado) {
+                totalApariciones++;
+                // El animalito que salió inmediatamente después en el historial
+                const numeroSiguiente = todosLosDatosHistorial[i + 1].numero;
+                parejas[numeroSiguiente] = (parejas[numeroSiguiente] || 0) + 1;
+            }
+        }
+
+        const masFrecuente = Object.entries(parejas).sort((a, b) => b[1] - a[1])[0];
+
+        if (masFrecuente) {
+            const porcentaje = Math.round((masFrecuente[1] / totalApariciones) * 100);
+            resultadoPareja.innerHTML = `
+                🤖 <strong>Análisis Automático VIP:</strong><br>
+                Cada vez que sale el <strong>${numBuscado}</strong>, el animalito que tiene mayor probabilidad de salir pegado o en los siguientes sorteos es el <strong>${masFrecuente[0]}</strong>.<br>
+                📊 <em>Frecuencia: Ha salido ${masFrecuente[1]} veces juntas (${porcentaje}% de efectividad).</em>
+            `;
+        } else {
+            resultadoPareja.innerHTML = `El animalito <strong>${numBuscado}</strong> no tiene suficientes repeticiones contiguas aún.`;
+        }
+    });
+}
+
+// Guardar Registro
 formResultado.addEventListener('submit', async (e) => {
     e.preventDefault();
     const numero = numeroInput.value.trim();
     const nombre = nombreInput.value.trim();
-    const fechaElegida = fechaInput.value; // ej: "2026-08-11"
+    const fechaElegida = fechaInput.value;
 
     if (!numero || !nombre) {
         alert("Por favor selecciona un animalito de la grilla táctil.");
         return;
     }
 
-    // Convertimos la fecha seleccionada en formato TIMESTAMP compatible con Supabase (created_at)
     const fechaObjeto = new Date(fechaElegida + 'T12:00:00');
     const timestampISO = fechaObjeto.toISOString();
 
